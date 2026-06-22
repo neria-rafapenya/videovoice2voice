@@ -6,7 +6,7 @@
   ],
   "scripts": {
     "dev": "yarn dev:all",
-    "dev:infra": "docker compose up -d",
+    "dev:infra": "node ./scripts/dev-infra.mjs",
     "dev:api:all": "PORT=3001 yarn dev:api",
     "dev:web:all": "VITE_API_URL=http://localhost:3001 yarn dev:web",
     "dev:all": "concurrently -n infra,api,web -c yellow,cyan,magenta \"yarn dev:infra\" \"yarn dev:api:all\" \"yarn dev:web:all\"",

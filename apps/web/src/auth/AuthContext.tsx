@@ -1,5 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { api } from '../lib/api'
+import { clearStoredSession, getStoredSession } from '../lib/session'
+import { ApiError } from '../lib/realApi'
 import type { AuthSession, AuthUser } from '../lib/types'
 
 type AuthContextValue = {
@@ -11,32 +13,50 @@ type AuthContextValue = {
   logout: () => void
 }
 
-const STORAGE_KEY = 'videovoice2voice.session'
-
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<AuthSession | null>(() => {
-    const raw = window.localStorage.getItem(STORAGE_KEY)
-
-    if (!raw) {
-      return null
-    }
-
-    try {
-      return JSON.parse(raw) as AuthSession
-    } catch {
-      window.localStorage.removeItem(STORAGE_KEY)
-      return null
-    }
+    return getStoredSession() as AuthSession | null
   })
-  const [isLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     if (session) {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(session))
+      window.localStorage.setItem('videovoice2voice.session', JSON.stringify(session))
     } else {
-      window.localStorage.removeItem(STORAGE_KEY)
+      clearStoredSession()
+    }
+  }, [session])
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function validateSession() {
+      if (!session) {
+        if (!cancelled) {
+          setIsLoading(false)
+        }
+        return
+      }
+
+      try {
+        await api.auth.me()
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 401) {
+          setSession(null)
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    void validateSession()
+
+    return () => {
+      cancelled = true
     }
   }, [session])
 

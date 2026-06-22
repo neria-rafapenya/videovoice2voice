@@ -1,10 +1,12 @@
+name: videovoice2voice
+
 services:
   postgres:
     image: postgres:16
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: videocall_translate
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: videovoice2voice
     ports:
       - '5432:5432'
 

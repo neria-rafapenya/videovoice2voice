@@ -1,61 +1,53 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
-import { randomUUID } from 'node:crypto'
+import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common'
+import { DatabaseService } from '../../database/database.service'
 import { LivekitService } from '../livekit/livekit.service'
-
-type CallRecord = {
-  callId: string
-  roomName: string
-  owner: {
-    id: string
-    email: string
-  }
-  sourceLanguage?: 'es' | 'en'
-  targetLanguage?: 'es' | 'en'
-  translationEnabled?: boolean
-}
 
 @Injectable()
 export class CallsService {
-  private readonly calls = new Map<string, CallRecord>()
+  constructor(
+    private readonly livekitService: LivekitService,
+    private readonly databaseService: DatabaseService,
+  ) {}
 
-  constructor(private readonly livekitService: LivekitService) {}
+  async createCall(accessToken: string) {
+    const user = await this.requireUser(accessToken)
+    const call = await this.databaseService.createCall(user.id)
 
-  createCall() {
-    const callId = randomUUID()
-    const call: CallRecord = {
-      callId,
-      roomName: `video-call-${callId}`,
+    return {
+      callId: call.callId,
+      roomName: call.roomName,
       owner: {
-        id: 'user_demo_1',
-        email: process.env.DEMO_USER_EMAIL ?? 'demo@app.com',
+        id: user.id,
+        email: user.email,
       },
     }
-
-    this.calls.set(callId, call)
-    return call
   }
 
-  async getLiveKitToken(callId: string, participantId: string, participantName: string) {
-    const call = this.calls.get(callId)
+  async getLiveKitToken(accessToken: string, callId: string, participantId: string, participantName: string) {
+    await this.requireUser(accessToken)
+    const call = await this.databaseService.getCallById(callId)
 
     if (!call) {
       throw new NotFoundException('La llamada no existe')
     }
 
-    return this.livekitService.createToken(call.roomName, participantId, participantName)
+    return this.livekitService.createToken(call.room_name, participantId, participantName)
   }
 
-  startTranslation(callId: string, sourceLanguage: 'es' | 'en', targetLanguage: 'es' | 'en') {
-    const call = this.calls.get(callId)
+  async startTranslation(
+    accessToken: string,
+    callId: string,
+    sourceLanguage: 'es' | 'en',
+    targetLanguage: 'es' | 'en',
+  ) {
+    await this.requireUser(accessToken)
+    const call = await this.databaseService.getCallById(callId)
 
     if (!call) {
       throw new NotFoundException('La llamada no existe')
     }
 
-    call.sourceLanguage = sourceLanguage
-    call.targetLanguage = targetLanguage
-    call.translationEnabled = true
-    this.calls.set(callId, call)
+    await this.databaseService.updateCallTranslation(callId, sourceLanguage, targetLanguage)
 
     return {
       callId,
@@ -63,5 +55,15 @@ export class CallsService {
       sourceLanguage,
       targetLanguage,
     }
+  }
+
+  private async requireUser(accessToken: string) {
+    const user = await this.databaseService.getUserBySessionToken(accessToken)
+
+    if (!user) {
+      throw new UnauthorizedException('Sesión no válida o caducada')
+    }
+
+    return user
   }
 }

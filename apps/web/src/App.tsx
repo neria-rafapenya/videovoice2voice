@@ -6,6 +6,7 @@ import { Shell } from './components/Shell'
 import { LocalPreview } from './components/LocalPreview'
 import { LiveCallViewer } from './components/LiveCallViewer'
 import { api } from './lib/api'
+import { ApiError } from './lib/realApi'
 import { formatDuration, formatCurrency } from './lib/format'
 import { getOrCreateParticipantIdentity } from './lib/participant'
 
@@ -167,6 +168,12 @@ function HomePage() {
         },
       })
     } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        logout()
+        navigate('/login', { replace: true })
+        return
+      }
+
       setError(err instanceof Error ? err.message : 'No se pudo crear la llamada')
     } finally {
       setLoading(false)
@@ -323,6 +330,7 @@ function HomePage() {
 function CallPage() {
   const { callId } = useParams()
   const location = useLocation()
+  const navigate = useNavigate()
   const { logout, user } = useAuth()
   const preset = location.state as
     | {
@@ -385,12 +393,18 @@ function CallPage() {
       setTokenData(token)
       setRoomConnected(true)
     } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        logout()
+        navigate('/login', { replace: true })
+        return
+      }
+
       setTokenError(err instanceof Error ? err.message : 'No se pudo obtener el token LiveKit')
       setRoomConnected(false)
     } finally {
       setLoadingToken(false)
     }
-  }, [callId, participantId, participantName])
+  }, [callId, logout, navigate, participantId, participantName])
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -465,6 +479,12 @@ function CallPage() {
       const result = await api.calls.startTranslation(callId, sourceLanguage, targetLanguage)
       setTranslationStatus(`${result.status}: ${result.sourceLanguage} → ${result.targetLanguage}`)
     } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        logout()
+        navigate('/login', { replace: true })
+        return
+      }
+
       setTokenError(err instanceof Error ? err.message : 'No se pudo activar la traducción')
     } finally {
       setTranslationLoading(false)

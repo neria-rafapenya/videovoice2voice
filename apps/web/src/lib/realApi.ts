@@ -1,9 +1,22 @@
 import type { AuthSession, CallRecord, LiveKitTokenResponse, ParticipantTokenRequest } from './types'
+import { getStoredAccessToken } from './session'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 const API_PREFIX = '/api'
 
+export class ApiError extends Error {
+  status: number
+
+  constructor(message: string, status: number) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
+  }
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const accessToken = getStoredAccessToken()
+
   let response: Response
 
   try {
@@ -11,6 +24,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       ...init,
       headers: {
         'Content-Type': 'application/json',
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
         ...(init?.headers ?? {}),
       },
     })
@@ -22,7 +36,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (!response.ok) {
     const message = await response.text()
-    throw new Error(message || `HTTP ${response.status}`)
+    throw new ApiError(message || `HTTP ${response.status}`, response.status)
   }
 
   return response.json() as Promise<T>
@@ -35,6 +49,9 @@ export const realApi = {
         method: 'POST',
         body: JSON.stringify({ email, password }),
       })
+    },
+    me(): Promise<{ user: AuthSession['user'] }> {
+      return request<{ user: AuthSession['user'] }>('/auth/me')
     },
   },
   calls: {

@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common'
-import { randomUUID } from 'node:crypto'
+import { DatabaseService } from '../../database/database.service'
+import { verifyPassword } from '../../database/password'
 
 type AuthUser = {
   id: string
@@ -13,24 +14,41 @@ type AuthSession = {
 
 @Injectable()
 export class AuthService {
-  private readonly demoEmail = process.env.DEMO_USER_EMAIL ?? 'demo@app.com'
-  private readonly demoPassword = process.env.DEMO_USER_PASSWORD ?? 'demo-demo-demo'
+  constructor(private readonly databaseService: DatabaseService) {}
 
-  login(email: string, password: string): AuthSession {
+  async login(email: string, password: string): Promise<AuthSession> {
     if (!email || !password) {
       throw new BadRequestException('Email y password son obligatorios')
     }
 
-    if (email !== this.demoEmail || password !== this.demoPassword) {
+    const user = await this.databaseService.getUserByEmail(email)
+
+    if (!user || !(await verifyPassword(password, user.password_hash))) {
       throw new UnauthorizedException('Credenciales inválidas')
     }
 
+    const accessToken = await this.databaseService.createSession(user.id)
+
     return {
-      accessToken: randomUUID(),
+      accessToken,
       user: {
-        id: 'user_demo_1',
-        email: this.demoEmail,
+        id: user.id,
+        email: user.email,
       },
     }
+  }
+
+  async getUserFromAccessToken(accessToken: string) {
+    if (!accessToken) {
+      throw new UnauthorizedException('Sesión no encontrada')
+    }
+
+    const user = await this.databaseService.getUserBySessionToken(accessToken)
+
+    if (!user) {
+      throw new UnauthorizedException('Sesión no válida o caducada')
+    }
+
+    return user
   }
 }
