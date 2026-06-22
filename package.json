@@ -1,0 +1,24 @@
+{
+  "name": "videovoice2voice",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "yarn dev:all",
+    "dev:infra": "docker compose up -d",
+    "dev:api:all": "PORT=3001 yarn dev:api",
+    "dev:web:all": "VITE_API_URL=http://localhost:3001 yarn dev:web",
+    "dev:all": "concurrently -n infra,api,web -c yellow,cyan,magenta \"yarn dev:infra\" \"yarn dev:api:all\" \"yarn dev:web:all\"",
+    "dev:web": "yarn workspace web dev",
+    "dev:api": "yarn workspace api dev",
+    "build:web": "yarn workspace web build",
+    "build:api": "yarn workspace api build",
+    "lint:web": "yarn workspace web lint",
+    "lint:api": "yarn workspace api lint"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  },
+  "packageManager": "yarn@1.22.22"
+}
