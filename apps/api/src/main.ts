@@ -9,8 +9,12 @@ async function bootstrap() {
     .map((origin) => origin.trim())
     .filter(Boolean)
 
-  const app = await NestFactory.create(AppModule, {
-    cors: allowedOrigins.length > 0 ? { origin: allowedOrigins, credentials: true } : true,
+  const app = await NestFactory.create(AppModule)
+  app.enableCors({
+    origin: allowedOrigins.length > 0 ? allowedOrigins : true,
+    credentials: true,
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   })
   app.setGlobalPrefix('api')
   app.useGlobalPipes(
@@ -21,6 +25,9 @@ async function bootstrap() {
   )
 
   const port = Number(process.env.PORT ?? 3000)
+  console.log(
+    `CORS origins: ${allowedOrigins.length > 0 ? allowedOrigins.join(', ') : 'allow all (no CORS_ORIGINS set)'}`,
+  )
   await app.listen(port)
   console.log(`API running on http://localhost:${port}/api`)
 }
