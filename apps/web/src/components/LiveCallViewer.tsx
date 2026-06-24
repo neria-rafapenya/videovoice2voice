@@ -37,7 +37,7 @@ function RemoteStage() {
   const remoteTracks = cameraTracks.filter((trackRef) => !trackRef.participant.isLocal)
 
   if (remoteTracks.length === 0) {
-    return <div className="remote-stage-empty">Esperando al participante remoto...</div>
+    return <div className="remote-stage-empty">Sala lista, esperando al otro participante...</div>
   }
 
   return (

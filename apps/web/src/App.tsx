@@ -531,10 +531,7 @@ function CallPage() {
         <div className="call-visor-grid">
           <div className="viewer-shell">
             {mediaStream ? (
-              <LocalPreview
-                stream={mediaStream}
-                status={roomConnected ? 'Conectando con LiveKit...' : undefined}
-              />
+              <LocalPreview stream={mediaStream} />
             ) : (
               <div className="viewer-loading">Preparando cámara local...</div>
             )}
