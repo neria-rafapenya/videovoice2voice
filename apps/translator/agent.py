@@ -1,11 +1,10 @@
 import json
 import logging
-import os
 
 from dotenv import load_dotenv
 
-from livekit.agents import Agent, AgentServer, AgentSession, JobContext, JobProcess, cli, room_io
-from livekit.plugins import google, silero
+from livekit.agents import Agent, AgentServer, AgentSession, JobContext, JobProcess, cli, inference, room_io
+from livekit.plugins import silero
 
 load_dotenv()
 
@@ -22,18 +21,21 @@ def prewarm(proc: JobProcess):
 server.setup_fnc = prewarm
 
 
+def language_label(code: str) -> str:
+    return {"es": "Spanish", "en": "English"}.get(code, code)
+
+
 def build_instructions(source_language: str, target_language: str) -> str:
-    source_label = "Spanish" if source_language == "es" else "English"
-    target_label = "English" if target_language == "en" else "Spanish"
+    source_label = language_label(source_language)
+    target_label = language_label(target_language)
 
     return (
-        "You are a simultaneous voice translator inside a LiveKit call.\n"
-        f"Translate every spoken utterance between {source_label} and {target_label}.\n"
+        "You are a live voice translator inside a LiveKit call.\n"
+        f"Translate every spoken utterance from {source_label} into {target_label}.\n"
         "Speak only the translation. Never add explanations, labels, or commentary.\n"
         "Keep the translation natural, concise, and immediate.\n"
-        "Do not wait for a manual prompt. As soon as the speaker finishes a thought, answer with the translation.\n"
-        "If the speaker is speaking in the target language, translate back to the source language.\n"
-        "If the speaker is speaking in the source language, translate to the target language.\n"
+        "If the speaker hesitates or repeats words, keep the meaning and drop the filler.\n"
+        "Do not wait for a manual prompt. Translate each completed utterance as soon as the user finishes speaking.\n"
     )
 
 
@@ -47,7 +49,6 @@ async def entrypoint(ctx: JobContext):
     metadata = json.loads(ctx.job.metadata or "{}")
     source_language = metadata.get("sourceLanguage", "es")
     target_language = metadata.get("targetLanguage", "en")
-
     instructions = build_instructions(source_language, target_language)
 
     logger.info(
@@ -61,17 +62,20 @@ async def entrypoint(ctx: JobContext):
     )
 
     session = AgentSession(
-        llm=google.beta.realtime.RealtimeModel(
-            model=os.environ.get(
-                "GEMINI_REALTIME_MODEL",
-                "gemini-2.5-flash-native-audio-preview-12-2025",
-            ),
-            instructions=instructions,
-            voice=os.environ.get("GEMINI_VOICE", "Puck"),
-            temperature=0.2,
-            proactivity=True,
+        stt=inference.STT(
+            model="deepgram/nova-3",
+            language=source_language,
+        ),
+        llm=inference.LLM(
+            model="google/gemini-2.5-flash-lite",
+        ),
+        tts=inference.TTS(
+            model="cartesia/sonic-3",
+            voice="9626c31c-bec5-4cca-baa8-f8ba9e84c8bc",
+            language=target_language,
         ),
         vad=ctx.proc.userdata["vad"],
+        preemptive_generation=True,
     )
 
     await session.start(

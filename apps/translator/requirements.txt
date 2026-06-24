@@ -1,2 +1,2 @@
-livekit-agents[silero,google]~=1.5
+livekit-agents[silero]~=1.5
 python-dotenv>=1.0.1

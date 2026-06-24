@@ -1,6 +1,6 @@
 # Translator Agent
 
-LiveKit + Gemini realtime translation agent.
+LiveKit translator agent for voice-to-voice dubbing.
 
 ## Railway
 
@@ -11,8 +11,5 @@ Environment variables:
 - `LIVEKIT_URL`
 - `LIVEKIT_API_KEY`
 - `LIVEKIT_API_SECRET`
-- `GOOGLE_API_KEY`
-- `GEMINI_REALTIME_MODEL` optional
-- `GEMINI_VOICE` optional
 
 The agent is dispatched to a room by the API when translation starts.
