@@ -31,6 +31,7 @@ def build_instructions(source_language: str, target_language: str) -> str:
         f"Translate every spoken utterance between {source_label} and {target_label}.\n"
         "Speak only the translation. Never add explanations, labels, or commentary.\n"
         "Keep the translation natural, concise, and immediate.\n"
+        "Do not wait for a manual prompt. As soon as the speaker finishes a thought, answer with the translation.\n"
         "If the speaker is speaking in the target language, translate back to the source language.\n"
         "If the speaker is speaking in the source language, translate to the target language.\n"
     )
@@ -68,7 +69,7 @@ async def entrypoint(ctx: JobContext):
             instructions=instructions,
             voice=os.environ.get("GEMINI_VOICE", "Puck"),
             temperature=0.2,
-            proactivity=False,
+            proactivity=True,
         ),
         vad=ctx.proc.userdata["vad"],
     )
