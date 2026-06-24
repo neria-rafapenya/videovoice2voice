@@ -3,20 +3,16 @@ import { ValidationPipe } from '@nestjs/common'
 import { NestFactory } from '@nestjs/core'
 import { AppModule } from './app.module'
 
-type CorsRequest = {
+type RequestLike = {
   method: string
+  originalUrl: string
   headers: {
     origin?: string
-    'access-control-request-headers'?: string
   }
 }
 
-type CorsResponse = {
-  header(name: string, value: string): void
-  sendStatus(status: number): void
-}
-
-type CorsNextFunction = () => void
+type ResponseLike = unknown
+type NextLike = () => void
 
 async function bootstrap() {
   const allowedOrigins = (process.env.CORS_ORIGINS ?? '')
@@ -25,34 +21,18 @@ async function bootstrap() {
     .filter(Boolean)
 
   const app = await NestFactory.create(AppModule)
-  app.use((req: CorsRequest, res: CorsResponse, next: CorsNextFunction) => {
-    const origin = req.headers.origin
-    const isAllowed =
-      allowedOrigins.length === 0 || (origin ? allowedOrigins.includes(origin) : false)
-
-    if (origin && isAllowed) {
-      res.header('Access-Control-Allow-Origin', origin)
-      res.header('Access-Control-Allow-Credentials', 'true')
-      res.header('Vary', 'Origin')
-      res.header('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS')
-      res.header(
-        'Access-Control-Allow-Headers',
-        req.headers['access-control-request-headers'] ?? 'Content-Type, Authorization',
-      )
+  app.use((req: RequestLike, _res: ResponseLike, next: NextLike) => {
+    if (req.method === 'OPTIONS' || req.method === 'POST') {
+      console.log(`Request ${req.method} ${req.originalUrl} origin=${req.headers.origin ?? 'none'}`)
     }
-
-    if (req.method === 'OPTIONS') {
-      res.sendStatus(204)
-      return
-    }
-
     next()
   })
   app.enableCors({
-    origin: allowedOrigins.length > 0 ? allowedOrigins : true,
-    credentials: true,
+    origin: true,
+    credentials: false,
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
+    optionsSuccessStatus: 204,
   })
   app.setGlobalPrefix('api')
   app.useGlobalPipes(
