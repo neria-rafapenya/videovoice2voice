@@ -11,5 +11,7 @@ Environment variables:
 - `LIVEKIT_URL`
 - `LIVEKIT_API_KEY`
 - `LIVEKIT_API_SECRET`
+- `TTS_VOICE_FEMALE` optional, defaults to `Ashley`
+- `TTS_VOICE_MALE` optional, defaults to `Diego`
 
 The agent is dispatched to a room by the API when translation starts.
