@@ -3,9 +3,20 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 type LocalPreviewProps = {
   stream: MediaStream | null
   status?: string
+  actionLabel?: string
+  actionState?: string
+  actionDisabled?: boolean
+  onAction?: () => void
 }
 
-export function LocalPreview({ stream, status }: LocalPreviewProps) {
+export function LocalPreview({
+  stream,
+  status,
+  actionLabel,
+  actionState,
+  actionDisabled,
+  onAction,
+}: LocalPreviewProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const [audioLevel, setAudioLevel] = useState(0)
   const meterSegments = useMemo(() => 14, [])
@@ -67,6 +78,19 @@ export function LocalPreview({ stream, status }: LocalPreviewProps) {
         <span className="video-badge">Vista local</span>
         <div className="local-preview-meta">
           {status ? <span className="local-preview-status">{status}</span> : null}
+          {onAction && actionLabel ? (
+            <div className="local-preview-action-group">
+              {actionState ? <span className="local-preview-state">{actionState}</span> : null}
+              <button
+                type="button"
+                className="ghost-button local-preview-action"
+                onClick={onAction}
+                disabled={actionDisabled}
+              >
+                {actionLabel}
+              </button>
+            </div>
+          ) : null}
         </div>
       </div>
       <video ref={videoRef} className="local-preview-video" autoPlay playsInline muted />

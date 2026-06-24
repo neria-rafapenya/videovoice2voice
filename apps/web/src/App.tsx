@@ -638,7 +638,39 @@ function CallPage() {
           </div>
         </div>
 
-        <div className="call-intro">
+        <div className="call-visor-grid">
+          <div className="viewer-shell">
+            {mediaStream ? (
+              <LocalPreview
+                stream={mediaStream}
+                actionLabel={translationEnabled ? 'Detener doblaje' : 'Doblaje detenido'}
+                actionState={translationEnabled ? 'Doblaje activo' : 'Doblaje detenido'}
+                actionDisabled={translationLoading || !translationEnabled}
+                onAction={() => void handleStopTranslation()}
+              />
+            ) : (
+              <div className="viewer-loading">Preparando cámara local...</div>
+            )}
+          </div>
+
+          <div className="remote-shell">
+            {tokenData ? (
+              <LiveCallViewer
+                serverUrl={tokenData.livekitUrl}
+                token={tokenData.token}
+                connected={roomConnected && mediaReady}
+                micEnabled={micEnabled}
+                cameraEnabled={cameraEnabled}
+                onDisconnected={() => setRoomConnected(false)}
+                onTranslatorStatus={setTranslatorNotice}
+              />
+            ) : (
+              <div className="viewer-loading">Preparando sala de video...</div>
+            )}
+          </div>
+        </div>
+
+        <div className="call-intro call-intro-below">
           <div>
             <span className="panel-kicker">Voice setup</span>
             <strong>
@@ -668,32 +700,6 @@ function CallPage() {
             <strong className={`translation-badge ${translationEnabled ? 'is-on' : 'is-off'}`}>
               {translationEnabled ? 'Traducción activa' : 'Traducción pausada'}
             </strong>
-          </div>
-        </div>
-
-        <div className="call-visor-grid">
-          <div className="viewer-shell">
-            {mediaStream ? (
-              <LocalPreview stream={mediaStream} />
-            ) : (
-              <div className="viewer-loading">Preparando cámara local...</div>
-            )}
-          </div>
-
-          <div className="remote-shell">
-            {tokenData ? (
-              <LiveCallViewer
-                serverUrl={tokenData.livekitUrl}
-                token={tokenData.token}
-                connected={roomConnected && mediaReady}
-                micEnabled={micEnabled}
-                cameraEnabled={cameraEnabled}
-                onDisconnected={() => setRoomConnected(false)}
-                onTranslatorStatus={setTranslatorNotice}
-              />
-            ) : (
-              <div className="viewer-loading">Preparando sala de video...</div>
-            )}
           </div>
         </div>
 
@@ -852,14 +858,6 @@ function CallPage() {
             disabled={translationLoading}
           >
             {translationLoading ? 'Activando traducción...' : 'Activar traducción'}
-          </button>
-          <button
-            type="button"
-            className="ghost-button"
-            onClick={() => void handleStopTranslation()}
-            disabled={translationLoading || !translationEnabled}
-          >
-            Detener doblaje
           </button>
         </div>
         <p className="helper-copy">La traducción se activa sola al entrar a la sala, incluso si todavía no hay otro participante.</p>

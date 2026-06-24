@@ -346,6 +346,10 @@
   margin-bottom: 1rem;
 }
 
+.call-intro-below {
+  margin-top: 0.25rem;
+}
+
 .viewer-shell {
   min-height: 28rem;
   border-radius: 24px;
@@ -433,6 +437,27 @@
   gap: 0.75rem;
   flex-wrap: wrap;
   justify-content: flex-end;
+}
+
+.local-preview-action-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.local-preview-action {
+  padding-inline: 0.9rem;
+}
+
+.local-preview-state {
+  padding: 0.38rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(125, 211, 252, 0.16);
+  color: #dff6ff;
+  font-size: 0.74rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .local-preview-status {

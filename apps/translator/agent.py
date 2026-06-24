@@ -101,8 +101,11 @@ async def entrypoint(ctx: JobContext):
             turn_detection=inference.TurnDetector(),
             endpointing={
                 "mode": "fixed",
-                "min_delay": 0.05 if fast_mode else 0.12,
-                "max_delay": 0.35 if fast_mode else 0.9,
+                "min_delay": 0.03 if fast_mode else 0.12,
+                "max_delay": 0.22 if fast_mode else 0.9,
+            },
+            interruption={
+                "enabled": False,
             },
             preemptive_generation={
                 "enabled": True,
@@ -155,6 +158,7 @@ async def entrypoint(ctx: JobContext):
                 user_input=normalized_transcript,
                 instructions=instructions,
                 input_modality="text",
+                allow_interruptions=False,
             )
             if alert_sent:
                 await publish_status("ok", "Traducción activa")
@@ -194,7 +198,7 @@ async def entrypoint(ctx: JobContext):
                 asyncio.create_task(speak_translation(transcript, speaker_id))
                 return
 
-            if len(transcript) < 12 or transcript == last_partial_transcript:
+            if len(transcript) < 8 or transcript == last_partial_transcript:
                 return
 
             last_partial_transcript = transcript
@@ -204,7 +208,7 @@ async def entrypoint(ctx: JobContext):
 
             async def delayed_translation(captured_transcript: str, captured_speaker_id: str | None):
                 try:
-                    await asyncio.sleep(0.15)
+                    await asyncio.sleep(0.08)
                 except asyncio.CancelledError:
                     return
 
