@@ -44,10 +44,10 @@ async function bootstrap() {
 
   const port = Number(process.env.PORT ?? 3000)
   console.log(
-    `CORS origins: ${allowedOrigins.length > 0 ? allowedOrigins.join(', ') : 'allow all (no CORS_ORIGINS set)'}`,
+    `Boot config: PORT=${process.env.PORT ?? 'unset'} CORS origins=${allowedOrigins.length > 0 ? allowedOrigins.join(', ') : 'allow all (no CORS_ORIGINS set)'}`,
   )
-  await app.listen(port)
-  console.log(`API running on http://localhost:${port}/api`)
+  await app.listen(port, '0.0.0.0')
+  console.log(`API running on 0.0.0.0:${port}/api`)
 }
 
 void bootstrap()
