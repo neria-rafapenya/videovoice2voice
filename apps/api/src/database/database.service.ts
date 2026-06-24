@@ -193,6 +193,11 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
       )
     `)
 
+    await this.query(`ALTER TABLE calls ADD COLUMN IF NOT EXISTS translation_dispatch_id TEXT NULL`)
+    await this.query(`ALTER TABLE calls ADD COLUMN IF NOT EXISTS source_language TEXT NULL`)
+    await this.query(`ALTER TABLE calls ADD COLUMN IF NOT EXISTS target_language TEXT NULL`)
+    await this.query(`ALTER TABLE calls ADD COLUMN IF NOT EXISTS translation_enabled BOOLEAN NOT NULL DEFAULT FALSE`)
+
     await this.query(`CREATE INDEX IF NOT EXISTS idx_auth_sessions_user_id ON auth_sessions(user_id)`)
     await this.query(`CREATE INDEX IF NOT EXISTS idx_calls_owner_id ON calls(owner_id)`)
 
