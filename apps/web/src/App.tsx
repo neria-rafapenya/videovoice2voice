@@ -542,6 +542,12 @@ function CallPage() {
                   : 'Push to translate'}
             </strong>
           </div>
+          <div>
+            <span className="panel-kicker">Translation</span>
+            <strong className={`translation-badge ${translationEnabled ? 'is-on' : 'is-off'}`}>
+              {translationEnabled ? 'Traducción activa' : 'Traducción pausada'}
+            </strong>
+          </div>
         </div>
 
         <div className="call-visor-grid">

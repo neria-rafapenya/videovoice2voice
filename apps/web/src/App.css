@@ -223,6 +223,31 @@
   background: rgba(167, 243, 208, 0.14);
 }
 
+.translation-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  width: fit-content;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+}
+
+.translation-badge.is-on {
+  color: #bbf7d0;
+  background: rgba(16, 185, 129, 0.16);
+  border-color: rgba(110, 231, 183, 0.28);
+}
+
+.translation-badge.is-off {
+  color: rgba(255, 255, 255, 0.84);
+  background: rgba(148, 163, 184, 0.16);
+  border-color: rgba(148, 163, 184, 0.24);
+}
+
 .step-list {
   margin-bottom: 1rem;
 }

@@ -6,6 +6,7 @@ export class LivekitService {
   private readonly apiKey = process.env.LIVEKIT_API_KEY ?? 'devkey'
   private readonly apiSecret = process.env.LIVEKIT_API_SECRET ?? 'secret'
   private readonly livekitUrl = process.env.LIVEKIT_URL ?? 'ws://localhost:7880'
+  private readonly livekitHttpUrl = toLiveKitHttpUrl(this.livekitUrl)
   private readonly translatorAgentName = process.env.LIVEKIT_TRANSLATOR_AGENT_NAME ?? 'translator-agent'
 
   async createToken(roomName: string, identity: string, name?: string) {
@@ -37,10 +38,22 @@ export class LivekitService {
       targetLanguage: 'es' | 'en'
     },
   ) {
-    const dispatchClient = new AgentDispatchClient(this.livekitUrl, this.apiKey, this.apiSecret)
+    const dispatchClient = new AgentDispatchClient(this.livekitHttpUrl, this.apiKey, this.apiSecret)
 
     return dispatchClient.createDispatch(roomName, this.translatorAgentName, {
       metadata: JSON.stringify(metadata),
     })
   }
+}
+
+function toLiveKitHttpUrl(livekitUrl: string) {
+  if (livekitUrl.startsWith('wss://')) {
+    return livekitUrl.replace(/^wss:\/\//, 'https://')
+  }
+
+  if (livekitUrl.startsWith('ws://')) {
+    return livekitUrl.replace(/^ws:\/\//, 'http://')
+  }
+
+  return livekitUrl
 }
