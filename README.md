@@ -10,6 +10,7 @@ Monorepo base para el sandbox de videollamada con traducción voz a voz.
 
 - `apps/web`: frontend React + Vite + TypeScript
 - `apps/api`: backend NestJS con auth, calls y token LiveKit
+- `apps/translator`: agente Python de LiveKit para doblaje voz a voz
 - `docker-compose.yml`: servicios locales de apoyo
 
 ## Arranque
@@ -81,3 +82,10 @@ Root directory por servicio:
 1. API: `apps/api`
 1. Web: `apps/web`
 1. Translator: `apps/translator`
+
+## UI actual
+
+- La vista de llamada prioriza los dos visores arriba.
+- La tarjeta de configuración queda debajo.
+- El botón de detener doblaje vive dentro de la tarjeta de la vista local, encima del player.
+- La estrategia de traducción por defecto es `fast`.

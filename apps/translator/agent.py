@@ -64,6 +64,17 @@ def build_translator_agent(instructions: str, voice_name: str, target_language: 
     )
 
 
+def should_translate_partial(transcript: str) -> bool:
+    normalized = transcript.strip()
+    if not normalized:
+        return False
+
+    word_count = len(normalized.split())
+    ends_like_sentence = normalized.endswith(('.', ',', '?', '!', ';', ':'))
+
+    return ends_like_sentence or word_count >= 5 or len(normalized) >= 24
+
+
 @server.rtc_session(agent_name="translator-agent")
 async def entrypoint(ctx: JobContext):
     metadata = json.loads(ctx.job.metadata or "{}")
@@ -101,8 +112,8 @@ async def entrypoint(ctx: JobContext):
             turn_detection=inference.TurnDetector(),
             endpointing={
                 "mode": "fixed",
-                "min_delay": 0.03 if fast_mode else 0.12,
-                "max_delay": 0.22 if fast_mode else 0.9,
+                "min_delay": 0.06 if fast_mode else 0.16,
+                "max_delay": 0.45 if fast_mode else 1.1,
             },
             interruption={
                 "enabled": False,
@@ -120,6 +131,7 @@ async def entrypoint(ctx: JobContext):
     alert_sent = False
     last_translated_transcript = ""
     last_partial_transcript = ""
+    last_partial_signature = ""
     pending_translation_task: asyncio.Task[None] | None = None
 
     async def publish_status(level: str, message: str):
@@ -182,7 +194,7 @@ async def entrypoint(ctx: JobContext):
 
     @session.on("user_input_transcribed")
     def on_user_input_transcribed(event):
-        nonlocal pending_translation_task, last_partial_transcript
+        nonlocal pending_translation_task, last_partial_transcript, last_partial_signature
 
         transcript = getattr(event, "transcript", "").strip()
         is_final = bool(getattr(event, "is_final", False))
@@ -198,17 +210,25 @@ async def entrypoint(ctx: JobContext):
                 asyncio.create_task(speak_translation(transcript, speaker_id))
                 return
 
-            if len(transcript) < 8 or transcript == last_partial_transcript:
+            if transcript == last_partial_transcript:
                 return
 
             last_partial_transcript = transcript
+
+            if not should_translate_partial(transcript):
+                return
+
+            partial_signature = f"{speaker_id or 'unknown'}::{transcript}"
+            if partial_signature == last_partial_signature:
+                return
+            last_partial_signature = partial_signature
 
             if pending_translation_task and not pending_translation_task.done():
                 pending_translation_task.cancel()
 
             async def delayed_translation(captured_transcript: str, captured_speaker_id: str | None):
                 try:
-                    await asyncio.sleep(0.08)
+                    await asyncio.sleep(0.22)
                 except asyncio.CancelledError:
                     return
 

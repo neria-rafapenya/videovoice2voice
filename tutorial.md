@@ -132,11 +132,14 @@ La vista de llamada muestra:
 
 - previsualización local de cámara
 - visor remoto
+- control de doblaje dentro de la tarjeta de vista local
 - controles de micrófono y cámara
 - estado de traducción
 - minutero
 - coste estimado
 - aviso de salud del traductor
+
+Además, la tarjeta de configuración se colocó debajo de los dos visores para que, al entrar, lo primero que se vea sea el vídeo y no los ajustes.
 
 ## 8. LiveKit: lo esencial que hemos aprendido
 
@@ -182,6 +185,15 @@ Actualmente usamos una estrategia estable y barata:
 - LLM: `google/gemini-2.5-flash-lite`
 - TTS: `inworld/inworld-tts-2`
 
+### Estrategias de traducción
+
+La app expone dos modos:
+
+- `fast`: el modo por defecto, pensado para entrar antes en la traducción con parciales y generación preemptiva.
+- `stable`: un modo más conservador, pensado para esperar mejor al final del turno.
+
+En la práctica, el modo `fast` intenta acercarse al doblaje casi simultáneo, aunque siempre existe una latencia mínima por STT, LLM y TTS.
+
 ### Por qué cambiamos varias veces
 
 Al principio probamos un modelo speech-to-speech tipo realtime.
@@ -221,6 +233,7 @@ Por eso, aunque la app sea rápida, nunca será literalmente instantánea.
 - ajustamos el endpointing
 - intentamos empezar a traducir antes de cerrar del todo la frase
 - simplificamos la voz TTS para evitar exceso de conexiones
+- desactivamos interrupciones de TTS para que la locución no se corte cuando el usuario vuelve a hablar
 
 ## 11. Lección importante sobre costes
 
@@ -245,6 +258,7 @@ Cuando vimos un aviso de “100% of concurrent TTS connections used”, eso sign
 - una sola voz por sesión
 - menos cambios de voz dinámicos
 - aviso visible en la UI si el traductor falla
+- opción de detener el doblaje desde la tarjeta de la vista local
 
 ## 12. Minutero y coste estimado
 
@@ -394,4 +408,3 @@ La combinación que hemos montado deja una base funcional y bastante realista pa
 - LiveKit para el tiempo real
 - Python agent para la voz
 - Railway para desplegarlo todo
-

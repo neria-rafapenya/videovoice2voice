@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 type LocalPreviewProps = {
   stream: MediaStream | null
   status?: string
+  overlayMessage?: string
   actionLabel?: string
   actionState?: string
   actionDisabled?: boolean
@@ -12,6 +13,7 @@ type LocalPreviewProps = {
 export function LocalPreview({
   stream,
   status,
+  overlayMessage,
   actionLabel,
   actionState,
   actionDisabled,
@@ -93,7 +95,15 @@ export function LocalPreview({
           ) : null}
         </div>
       </div>
-      <video ref={videoRef} className="local-preview-video" autoPlay playsInline muted />
+      <div className="local-preview-viewport">
+        <video ref={videoRef} className="local-preview-video" autoPlay playsInline muted />
+        {overlayMessage ? (
+          <div className="local-preview-overlay" aria-live="polite">
+            <span className="local-preview-spinner" aria-hidden="true" />
+            <span>{overlayMessage}</span>
+          </div>
+        ) : null}
+      </div>
       <div className="audio-meter" aria-label="Nivel de audio del micrófono">
         {Array.from({ length: meterSegments }, (_, index) => (
           <span

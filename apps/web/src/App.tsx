@@ -643,6 +643,7 @@ function CallPage() {
             {mediaStream ? (
               <LocalPreview
                 stream={mediaStream}
+                overlayMessage={translationLoading ? 'Cargando intérprete...' : undefined}
                 actionLabel={translationEnabled ? 'Detener doblaje' : 'Doblaje detenido'}
                 actionState={translationEnabled ? 'Doblaje activo' : 'Doblaje detenido'}
                 actionDisabled={translationLoading || !translationEnabled}
