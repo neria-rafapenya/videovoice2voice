@@ -17,6 +17,7 @@ export type DbCallRow = {
   source_language: 'es' | 'en' | null
   target_language: 'es' | 'en' | null
   translation_enabled: boolean
+  translation_dispatch_id: string | null
 }
 
 @Injectable()
@@ -120,7 +121,8 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
           u.email AS owner_email,
           c.source_language,
           c.target_language,
-          c.translation_enabled
+          c.translation_enabled,
+          c.translation_dispatch_id
         FROM calls c
         INNER JOIN app_users u ON u.id = c.owner_id
         WHERE c.call_id = $1
@@ -143,6 +145,18 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
         WHERE call_id = $1
       `,
       [callId, sourceLanguage, targetLanguage],
+    )
+  }
+
+  async setCallTranslationDispatch(callId: string, dispatchId: string) {
+    await this.query(
+      `
+        UPDATE calls
+        SET translation_dispatch_id = $2,
+            updated_at = NOW()
+        WHERE call_id = $1
+      `,
+      [callId, dispatchId],
     )
   }
 
@@ -173,6 +187,7 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
         source_language TEXT NULL CHECK (source_language IN ('es', 'en')),
         target_language TEXT NULL CHECK (target_language IN ('es', 'en')),
         translation_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+        translation_dispatch_id TEXT NULL,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )

@@ -19,6 +19,14 @@ export type LiveKitTokenResponse = {
   token: string
 }
 
+export type TranslationStartResponse = {
+  callId: string
+  status: string
+  sourceLanguage: 'es' | 'en'
+  targetLanguage: 'es' | 'en'
+  dispatchId?: string
+}
+
 export type ParticipantTokenRequest = {
   participantId: string
   participantName: string

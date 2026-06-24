@@ -1,4 +1,10 @@
-import type { AuthSession, CallRecord, LiveKitTokenResponse, ParticipantTokenRequest } from './types'
+import type {
+  AuthSession,
+  CallRecord,
+  LiveKitTokenResponse,
+  ParticipantTokenRequest,
+  TranslationStartResponse,
+} from './types'
 import { getStoredAccessToken } from './session'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
@@ -71,13 +77,10 @@ export const realApi = {
       sourceLanguage: 'es' | 'en',
       targetLanguage: 'es' | 'en',
     ) {
-      return request<{ callId: string; status: string; sourceLanguage: 'es' | 'en'; targetLanguage: 'es' | 'en' }>(
-        `/calls/${callId}/translation/start`,
-        {
-          method: 'POST',
-          body: JSON.stringify({ sourceLanguage, targetLanguage }),
-        },
-      )
+      return request<TranslationStartResponse>(`/calls/${callId}/translation/start`, {
+        method: 'POST',
+        body: JSON.stringify({ sourceLanguage, targetLanguage }),
+      })
     },
   },
 }

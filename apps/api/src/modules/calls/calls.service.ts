@@ -47,13 +47,31 @@ export class CallsService {
       throw new NotFoundException('La llamada no existe')
     }
 
+    if (call.translation_enabled && call.translation_dispatch_id) {
+      return {
+        callId,
+        status: 'ACTIVE',
+        sourceLanguage,
+        targetLanguage,
+        dispatchId: call.translation_dispatch_id,
+      }
+    }
+
+    const dispatch = await this.livekitService.dispatchTranslatorAgent(call.room_name, {
+      callId,
+      sourceLanguage,
+      targetLanguage,
+    })
+
     await this.databaseService.updateCallTranslation(callId, sourceLanguage, targetLanguage)
+    await this.databaseService.setCallTranslationDispatch(callId, dispatch.id)
 
     return {
       callId,
       status: 'ACTIVE',
       sourceLanguage,
       targetLanguage,
+      dispatchId: dispatch.id,
     }
   }
 
