@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import os
@@ -31,7 +32,7 @@ MALE_VOICE = os.environ.get("TTS_VOICE_MALE", "Diego")
 def prewarm(proc: JobProcess):
     proc.userdata["vad"] = inference.VAD(model="silero")
     proc.userdata["speaker_voices"] = {}
-    proc.userdata["voice_cycle"] = cycle((FEMALE_VOICE, MALE_VOICE))
+    proc.userdata["voice_cycle"] = cycle((MALE_VOICE, FEMALE_VOICE))
 
 
 server.setup_fnc = prewarm
@@ -61,7 +62,7 @@ def next_voice(proc: JobProcess) -> str:
 
 def voice_for_speaker(proc: JobProcess, speaker_id: str | None) -> str:
     if not speaker_id:
-        return FEMALE_VOICE
+        return MALE_VOICE
 
     speaker_voices = proc.userdata["speaker_voices"]
     if speaker_id not in speaker_voices:
@@ -98,7 +99,7 @@ async def entrypoint(ctx: JobContext):
         },
     )
 
-    initial_voice = FEMALE_VOICE
+    initial_voice = MALE_VOICE
     session = AgentSession(
         stt=inference.STT(
             model="deepgram/nova-3",
@@ -112,8 +113,8 @@ async def entrypoint(ctx: JobContext):
             turn_detection=inference.TurnDetector(),
             endpointing={
                 "mode": "fixed",
-                "min_delay": 0.2,
-                "max_delay": 1.0,
+                "min_delay": 0.1,
+                "max_delay": 0.8,
             },
             preemptive_generation={
                 "enabled": True,
@@ -126,19 +127,20 @@ async def entrypoint(ctx: JobContext):
 
     session_agent = build_translator_agent(instructions, initial_voice, target_language)
     active_voice = initial_voice
+    pending_translation_task: asyncio.Task[None] | None = None
+    latest_partial_transcript = ""
+    latest_partial_speaker_id: str | None = None
 
-    @session.on("user_input_transcribed")
-    def on_user_input_transcribed(event):
-        transcript = getattr(event, "transcript", "").strip()
-        is_final = bool(getattr(event, "is_final", False))
-        speaker_id = getattr(event, "speaker_id", None)
-
-        if not is_final or not transcript:
-            return
+    async def speak_translation(transcript: str, speaker_id: str | None):
+        nonlocal active_voice
 
         voice_name = voice_for_speaker(ctx.proc, speaker_id)
+        if voice_name != active_voice:
+            session.update_agent(build_translator_agent(instructions, voice_name, target_language))
+            active_voice = voice_name
+
         logger.info(
-            "user transcript received",
+            "translating transcript",
             extra={
                 "room": ctx.room.name,
                 "callId": metadata.get("callId"),
@@ -148,10 +150,53 @@ async def entrypoint(ctx: JobContext):
             },
         )
 
-        nonlocal active_voice
-        if voice_name != active_voice:
-            session.update_agent(build_translator_agent(instructions, voice_name, target_language))
-            active_voice = voice_name
+        await session.generate_reply(
+            user_input=transcript,
+            instructions=instructions,
+            input_modality="text",
+        )
+
+    @session.on("user_input_transcribed")
+    def on_user_input_transcribed(event):
+        nonlocal pending_translation_task, latest_partial_transcript, latest_partial_speaker_id
+
+        transcript = getattr(event, "transcript", "").strip()
+        is_final = bool(getattr(event, "is_final", False))
+        speaker_id = getattr(event, "speaker_id", None)
+
+        if not is_final or not transcript:
+            if len(transcript) < 12:
+                return
+
+            latest_partial_transcript = transcript
+            latest_partial_speaker_id = speaker_id
+
+            if pending_translation_task and not pending_translation_task.done():
+                pending_translation_task.cancel()
+
+            async def delayed_translation(captured_transcript: str, captured_speaker_id: str | None):
+                try:
+                    await asyncio.sleep(0.2)
+                except asyncio.CancelledError:
+                    return
+
+                if (
+                    captured_transcript != latest_partial_transcript
+                    or captured_speaker_id != latest_partial_speaker_id
+                ):
+                    return
+
+                await speak_translation(captured_transcript, captured_speaker_id)
+
+            pending_translation_task = asyncio.create_task(
+                delayed_translation(transcript, speaker_id),
+            )
+            return
+
+        if pending_translation_task and not pending_translation_task.done():
+            pending_translation_task.cancel()
+
+        asyncio.create_task(speak_translation(transcript, speaker_id))
 
     await session.start(
         room=ctx.room,

@@ -349,7 +349,7 @@ function CallPage() {
   const [mode, setMode] = useState<'solo-translation' | 'translation-plus-original' | 'push-to-translate'>(
     preset?.voiceMode ?? 'solo-translation',
   )
-  const [durationSeconds, setDurationSeconds] = useState(462)
+  const [durationSeconds, setDurationSeconds] = useState(0)
   const [latencySeconds, setLatencySeconds] = useState(2.4)
   const [debugOpen, setDebugOpen] = useState(true)
   const [loadingToken, setLoadingToken] = useState(false)
@@ -362,6 +362,7 @@ function CallPage() {
   const [mediaLoading, setMediaLoading] = useState(false)
   const [mediaError, setMediaError] = useState<string | null>(null)
   const [mediaStream, setMediaStream] = useState<MediaStream | null>(null)
+  const [callStartedAt, setCallStartedAt] = useState<number | null>(null)
   const mediaRequestStarted = useRef(false)
   const translationAutoStartRequested = useRef(false)
 
@@ -449,12 +450,32 @@ function CallPage() {
       return
     }
 
+    if (callStartedAt === null) {
+      const startTimer = window.setTimeout(() => setCallStartedAt(Date.now()), 0)
+      return () => window.clearTimeout(startTimer)
+    }
+
     const timeout = window.setTimeout(() => {
       void requestMedia()
     }, 0)
 
     return () => window.clearTimeout(timeout)
-  }, [requestMedia, tokenData])
+  }, [callStartedAt, requestMedia, tokenData])
+
+  useEffect(() => {
+    if (callStartedAt === null) {
+      return
+    }
+
+    const tick = () => {
+      setDurationSeconds(Math.floor((Date.now() - callStartedAt) / 1000))
+    }
+
+    tick()
+    const interval = window.setInterval(tick, 1000)
+
+    return () => window.clearInterval(interval)
+  }, [callStartedAt])
 
   useEffect(() => {
     return () => {
@@ -662,11 +683,11 @@ function CallPage() {
 
         <div className="session-summary">
           <article>
-            <span>Duración</span>
+            <span>Minutero</span>
             <strong>{formatDuration(durationSeconds)}</strong>
           </article>
           <article>
-            <span>Coste estimado</span>
+            <span>Coste estimado de esta llamada</span>
             <strong>{estimatedCost}</strong>
           </article>
           <article>
@@ -674,18 +695,6 @@ function CallPage() {
             <strong>{translationStatus}</strong>
           </article>
         </div>
-
-        <label className="field duration-field">
-          <span>Simular duración de sesión</span>
-          <input
-            type="range"
-            min={0}
-            max={3600}
-            step={15}
-            value={durationSeconds}
-            onChange={(event) => setDurationSeconds(Number(event.target.value))}
-          />
-        </label>
 
         {tokenError ? <p className="error-banner">{tokenError}</p> : null}
 
