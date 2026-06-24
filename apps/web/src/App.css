@@ -344,10 +344,15 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
   margin-bottom: 1rem;
+  align-items: stretch;
 }
 
 .call-intro-below {
   margin-top: 0.25rem;
+}
+
+.share-status {
+  margin-top: -0.25rem;
 }
 
 .viewer-shell {
@@ -827,6 +832,10 @@
   font-size: 1.05rem;
 }
 
+.dashboard-call-button-top {
+  margin: 0.25rem 0 0.1rem;
+}
+
 .language-group {
   display: grid;
   gap: 0.75rem;
@@ -942,6 +951,10 @@
     width: 10rem;
     height: 10rem;
   }
+
+  .call-visor-grid {
+    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  }
 }
 
 @media (max-width: 760px) {
@@ -968,6 +981,32 @@
     grid-template-columns: 1fr;
   }
 
+  .panel-heading,
+  .language-group-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .call-visor-grid {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .remote-shell {
+    order: 1;
+    min-height: 24rem;
+  }
+
+  .viewer-shell {
+    order: 2;
+    min-height: 14rem;
+  }
+
   .viewer-shell,
   .viewer-loading,
   .live-call-viewer,
@@ -976,8 +1015,32 @@
     min-height: 20rem;
   }
 
+  .remote-shell {
+    min-height: 24rem;
+  }
+
+  .viewer-shell {
+    min-height: 14rem;
+  }
+
   .local-preview-video {
-    min-height: 16rem;
+    min-height: 10rem;
+  }
+
+  .local-preview {
+    min-height: 14rem;
+  }
+
+  .local-preview-viewport {
+    min-height: 10rem;
+  }
+
+  .audio-meter {
+    min-height: 3.5rem;
+  }
+
+  .remote-stage {
+    grid-template-columns: 1fr;
   }
 
   .panel {

@@ -87,5 +87,7 @@ Root directory por servicio:
 
 - La vista de llamada prioriza los dos visores arriba.
 - La tarjeta de configuración queda debajo.
-- El botón de detener doblaje vive dentro de la tarjeta de la vista local, encima del player.
+- El botón de doblaje vive dentro de la tarjeta de la vista local, encima del player, y actúa como `detener / reactivar`.
+- Hay un botón para copiar el enlace de la llamada y compartirla con otra persona.
+- En móvil el remoto gana prioridad visual y la vista local queda compacta debajo.
 - La estrategia de traducción por defecto es `fast`.

@@ -207,6 +207,15 @@ function HomePage() {
           escuchar la traducción y lanza la llamada cuando estés listo.
         </p>
 
+        <button
+          type="button"
+          className="primary-button dashboard-call-button dashboard-call-button-top"
+          onClick={handleCreateCall}
+          disabled={loading}
+        >
+          {loading ? 'Abriendo llamada...' : 'Llamada'}
+        </button>
+
         <div className="language-group">
           <div className="language-group-header">
             <span className="panel-kicker">Mi idioma</span>
@@ -343,10 +352,6 @@ function HomePage() {
         </div>
 
         {error ? <p className="error-banner">{error}</p> : null}
-
-        <button type="button" className="primary-button dashboard-call-button" onClick={handleCreateCall} disabled={loading}>
-          {loading ? 'Abriendo llamada...' : 'Llamada'}
-        </button>
       </section>
 
       <section className="panel dashboard-panel video-panel">
@@ -423,10 +428,18 @@ function CallPage() {
   const [mediaError, setMediaError] = useState<string | null>(null)
   const [mediaStream, setMediaStream] = useState<MediaStream | null>(null)
   const [callStartedAt, setCallStartedAt] = useState<number | null>(null)
+  const [shareStatus, setShareStatus] = useState<string | null>(null)
   const mediaRequestStarted = useRef(false)
   const translationAutoStartRequested = useRef(false)
 
   const estimatedCost = useMemo(() => formatCurrency((durationSeconds / 60) * 0.0368), [durationSeconds])
+  const shareLink = useMemo(() => {
+    if (!callId || typeof window === 'undefined') {
+      return ''
+    }
+
+    return `${window.location.origin}/call/${callId}`
+  }, [callId])
   const tokenText = useMemo(() => {
     if (!tokenData) return ''
     return typeof tokenData.token === 'string' ? tokenData.token : JSON.stringify(tokenData.token)
@@ -581,6 +594,14 @@ function CallPage() {
     }
   }, [callId, logout, navigate, sourceLanguage, targetLanguage, translationMode, voicePreference])
 
+  const handleResumeTranslation = useCallback(async () => {
+    if (!callId) return
+
+    translationAutoStartRequested.current = true
+    setTranslationEnabled(true)
+    await handleStartTranslation()
+  }, [callId, handleStartTranslation])
+
   const handleStopTranslation = useCallback(async () => {
     if (!callId) return
 
@@ -605,6 +626,19 @@ function CallPage() {
     }
   }, [callId, logout, navigate])
 
+  const handleCopyShareLink = useCallback(async () => {
+    if (!shareLink) return
+
+    try {
+      await navigator.clipboard.writeText(shareLink)
+      setShareStatus('Enlace copiado')
+    } catch {
+      setShareStatus('No se pudo copiar')
+    }
+
+    window.setTimeout(() => setShareStatus(null), 2000)
+  }, [shareLink])
+
   useEffect(() => {
     if (!tokenData || !translationEnabled || translationAutoStartRequested.current) {
       return
@@ -628,7 +662,10 @@ function CallPage() {
             <span className="panel-kicker">Video call</span>
             <h2>Room {callId}</h2>
           </div>
-        <div className="header-actions">
+          <div className="header-actions">
+            <button type="button" className="ghost-button" onClick={handleCopyShareLink} disabled={!shareLink}>
+              Copiar enlace
+            </button>
             <button type="button" className="ghost-button" onClick={loadToken} disabled={loadingToken}>
               {loadingToken ? 'Cargando token...' : 'Obtener token LiveKit'}
             </button>
@@ -637,6 +674,7 @@ function CallPage() {
             </button>
           </div>
         </div>
+        {shareStatus ? <p className="helper-copy share-status">{shareStatus}</p> : null}
 
         <div className="call-visor-grid">
           <div className="viewer-shell">
@@ -644,10 +682,17 @@ function CallPage() {
               <LocalPreview
                 stream={mediaStream}
                 overlayMessage={translationLoading ? 'Cargando intérprete...' : undefined}
-                actionLabel={translationEnabled ? 'Detener doblaje' : 'Doblaje detenido'}
+                actionLabel={translationEnabled ? 'Detener doblaje' : 'Reactivar doblaje'}
                 actionState={translationEnabled ? 'Doblaje activo' : 'Doblaje detenido'}
-                actionDisabled={translationLoading || !translationEnabled}
-                onAction={() => void handleStopTranslation()}
+                actionDisabled={translationLoading}
+                onAction={() => {
+                  if (translationEnabled) {
+                    void handleStopTranslation()
+                    return
+                  }
+
+                  void handleResumeTranslation()
+                }}
               />
             ) : (
               <div className="viewer-loading">Preparando cámara local...</div>
@@ -853,12 +898,17 @@ function CallPage() {
             type="button"
             className="secondary-button"
             onClick={() => {
-              translationAutoStartRequested.current = false
-              void handleStartTranslation()
+              if (translationEnabled) {
+                translationAutoStartRequested.current = false
+                void handleStopTranslation()
+                return
+              }
+
+              void handleResumeTranslation()
             }}
             disabled={translationLoading}
           >
-            {translationLoading ? 'Activando traducción...' : 'Activar traducción'}
+            {translationLoading ? 'Procesando...' : translationEnabled ? 'Detener traducción' : 'Activar traducción'}
           </button>
         </div>
         <p className="helper-copy">La traducción se activa sola al entrar a la sala, incluso si todavía no hay otro participante.</p>

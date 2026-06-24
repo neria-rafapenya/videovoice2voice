@@ -132,7 +132,8 @@ La vista de llamada muestra:
 
 - previsualización local de cámara
 - visor remoto
-- control de doblaje dentro de la tarjeta de vista local
+- control de doblaje dentro de la tarjeta de vista local, con estado `detener / reactivar`
+- enlace para compartir llamada con copia al portapapeles
 - controles de micrófono y cámara
 - estado de traducción
 - minutero
@@ -140,6 +141,8 @@ La vista de llamada muestra:
 - aviso de salud del traductor
 
 Además, la tarjeta de configuración se colocó debajo de los dos visores para que, al entrar, lo primero que se vea sea el vídeo y no los ajustes.
+
+En móvil, la UI prioriza el vídeo: el visor remoto pasa arriba y la vista local queda más compacta debajo.
 
 ## 8. LiveKit: lo esencial que hemos aprendido
 
@@ -189,10 +192,16 @@ Actualmente usamos una estrategia estable y barata:
 
 La app expone dos modos:
 
-- `fast`: el modo por defecto, pensado para entrar antes en la traducción con parciales y generación preemptiva.
+- `fast`: el modo por defecto, pensado para entrar antes en la traducción con endpointing corto y una breve espera de estabilidad para evitar repetir trozos del mismo turno.
 - `stable`: un modo más conservador, pensado para esperar mejor al final del turno.
 
 En la práctica, el modo `fast` intenta acercarse al doblaje casi simultáneo, aunque siempre existe una latencia mínima por STT, LLM y TTS.
+
+### Sobre la voz masculina o femenina
+
+LiveKit nos entrega `speaker_id` cuando el STT soporta diarización, pero eso no implica saber el género real de la persona.
+Por eso, la voz TTS sigue siendo una decisión de sesión o de hablante, no una inferencia fiable de género a partir del texto.
+Si en un caso real quieres una asignación automática de voz, hace falta un clasificador adicional de audio o una decisión manual por participante.
 
 ### Por qué cambiamos varias veces
 
