@@ -89,6 +89,8 @@ async def entrypoint(ctx: JobContext):
         ),
     )
 
+    await ctx.connect()
+
 
 if __name__ == "__main__":
     cli.run_app(server)
