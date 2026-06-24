@@ -4,7 +4,14 @@ import { NestFactory } from '@nestjs/core'
 import { AppModule } from './app.module'
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { cors: true })
+  const allowedOrigins = (process.env.CORS_ORIGINS ?? '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean)
+
+  const app = await NestFactory.create(AppModule, {
+    cors: allowedOrigins.length > 0 ? { origin: allowedOrigins, credentials: true } : true,
+  })
   app.setGlobalPrefix('api')
   app.useGlobalPipes(
     new ValidationPipe({
