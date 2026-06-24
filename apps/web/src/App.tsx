@@ -363,6 +363,7 @@ function CallPage() {
   const [mediaError, setMediaError] = useState<string | null>(null)
   const [mediaStream, setMediaStream] = useState<MediaStream | null>(null)
   const mediaRequestStarted = useRef(false)
+  const translationAutoStartRequested = useRef(false)
 
   const estimatedCost = useMemo(() => formatCurrency((durationSeconds / 60) * 0.0368), [durationSeconds])
   const tokenText = useMemo(() => {
@@ -469,7 +470,7 @@ function CallPage() {
     syncMediaTrackState('video', cameraEnabled)
   }, [cameraEnabled, syncMediaTrackState])
 
-  async function handleStartTranslation() {
+  const handleStartTranslation = useCallback(async () => {
     if (!callId) return
 
     setTranslationLoading(true)
@@ -489,7 +490,22 @@ function CallPage() {
     } finally {
       setTranslationLoading(false)
     }
-  }
+  }, [callId, logout, navigate, sourceLanguage, targetLanguage])
+
+  useEffect(() => {
+    if (!tokenData || !translationEnabled || translationAutoStartRequested.current) {
+      return
+    }
+
+    translationAutoStartRequested.current = true
+    void handleStartTranslation()
+  }, [handleStartTranslation, tokenData, translationEnabled])
+
+  useEffect(() => {
+    if (!translationEnabled) {
+      translationAutoStartRequested.current = false
+    }
+  }, [translationEnabled])
 
   return (
     <main className="page-grid call-page">
@@ -577,7 +593,17 @@ function CallPage() {
           <button
             type="button"
             className={`toggle-button ${translationEnabled ? 'is-on' : ''}`}
-            onClick={() => setTranslationEnabled((value) => !value)}
+            onClick={() => {
+              setTranslationEnabled((value) => {
+                const nextValue = !value
+
+                if (nextValue) {
+                  translationAutoStartRequested.current = false
+                }
+
+                return nextValue
+              })
+            }}
           >
             Traducción {translationEnabled ? 'ON' : 'OFF'}
           </button>
@@ -674,10 +700,18 @@ function CallPage() {
           </div>
         ) : null}
 
-        <button type="button" className="secondary-button" onClick={handleStartTranslation} disabled={translationLoading}>
+        <button
+          type="button"
+          className="secondary-button"
+          onClick={() => {
+            translationAutoStartRequested.current = false
+            void handleStartTranslation()
+          }}
+          disabled={translationLoading}
+        >
           {translationLoading ? 'Activando traducción...' : 'Activar traducción'}
         </button>
-        <p className="helper-copy">Sala lista para que dos pestañas entren al mismo room y se vean en video.</p>
+        <p className="helper-copy">La traducción se activa sola al entrar a la sala, incluso si todavía no hay otro participante.</p>
       </section>
 
       <section className="panel footer-panel">
