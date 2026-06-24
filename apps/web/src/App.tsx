@@ -15,6 +15,11 @@ const languageChoices = [
   { code: 'en' as const, label: 'Inglés' },
 ]
 
+const translationModeChoices = [
+  { code: 'fast' as const, label: 'Rápido' },
+  { code: 'stable' as const, label: 'Estable' },
+]
+
 function App() {
   return (
     <Routes>
@@ -151,6 +156,7 @@ function HomePage() {
   const [sourceLanguage, setSourceLanguage] = useState<'es' | 'en'>('es')
   const [targetLanguage, setTargetLanguage] = useState<'es' | 'en'>('en')
   const [voicePreference, setVoicePreference] = useState<'male' | 'female'>('male')
+  const [translationMode, setTranslationMode] = useState<'fast' | 'stable'>('fast')
   const [voiceMode, setVoiceMode] = useState<'solo-translation' | 'translation-plus-original' | 'push-to-translate'>(
     'solo-translation',
   )
@@ -161,14 +167,15 @@ function HomePage() {
 
     try {
       const call = await api.calls.create()
-          navigate(`/call/${call.callId}`, {
-            state: {
-              sourceLanguage,
-              targetLanguage,
-              voicePreference,
-              voiceMode,
-            },
-          })
+      navigate(`/call/${call.callId}`, {
+        state: {
+          sourceLanguage,
+          targetLanguage,
+          voicePreference,
+          translationMode,
+          voiceMode,
+        },
+      })
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         logout()
@@ -297,6 +304,25 @@ function HomePage() {
           </div>
         </div>
 
+        <div className="language-group">
+          <div className="language-group-header">
+            <span className="panel-kicker">Estrategia</span>
+            <strong>{translationMode === 'fast' ? 'Rápido' : 'Estable'}</strong>
+          </div>
+          <div className="button-row">
+            {translationModeChoices.map((item) => (
+              <button
+                key={item.code}
+                type="button"
+                className={`choice-button ${translationMode === item.code ? 'is-selected' : ''}`}
+                onClick={() => setTranslationMode(item.code)}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="session-summary dashboard-metrics">
           <article>
             <span>Estado</span>
@@ -309,6 +335,10 @@ function HomePage() {
           <article>
             <span>Modo</span>
             <strong>{voiceMode === 'solo-translation' ? 'Traducción' : voiceMode === 'translation-plus-original' ? 'Ambos' : 'Manual'}</strong>
+          </article>
+          <article>
+            <span>Estrategia</span>
+            <strong>{translationMode === 'fast' ? 'Rápido' : 'Estable'}</strong>
           </article>
         </div>
 
@@ -362,6 +392,7 @@ function CallPage() {
         sourceLanguage?: 'es' | 'en'
         targetLanguage?: 'es' | 'en'
         voicePreference?: 'male' | 'female'
+        translationMode?: 'fast' | 'stable'
         voiceMode?: 'solo-translation' | 'translation-plus-original' | 'push-to-translate'
       }
     | null
@@ -373,6 +404,7 @@ function CallPage() {
   const [sourceLanguage, setSourceLanguage] = useState<'es' | 'en'>(preset?.sourceLanguage ?? 'es')
   const [targetLanguage, setTargetLanguage] = useState<'es' | 'en'>(preset?.targetLanguage ?? 'en')
   const [voicePreference, setVoicePreference] = useState<'male' | 'female'>(preset?.voicePreference ?? 'male')
+  const [translationMode, setTranslationMode] = useState<'fast' | 'stable'>(preset?.translationMode ?? 'fast')
   const [mode, setMode] = useState<'solo-translation' | 'translation-plus-original' | 'push-to-translate'>(
     preset?.voiceMode ?? 'solo-translation',
   )
@@ -526,9 +558,15 @@ function CallPage() {
     setTokenError(null)
 
     try {
-      const result = await api.calls.startTranslation(callId, sourceLanguage, targetLanguage, voicePreference)
+      const result = await api.calls.startTranslation(
+        callId,
+        sourceLanguage,
+        targetLanguage,
+        voicePreference,
+        translationMode,
+      )
       setTranslationStatus(
-        `${result.status}: ${result.sourceLanguage} → ${result.targetLanguage} (${result.ttsVoice === 'male' ? 'Masculina' : 'Femenina'})`,
+        `${result.status}: ${result.sourceLanguage} → ${result.targetLanguage} (${result.ttsVoice === 'male' ? 'Masculina' : 'Femenina'}, ${result.translationMode === 'fast' ? 'Rápido' : 'Estable'})`,
       )
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -541,7 +579,31 @@ function CallPage() {
     } finally {
       setTranslationLoading(false)
     }
-  }, [callId, logout, navigate, sourceLanguage, targetLanguage, voicePreference])
+  }, [callId, logout, navigate, sourceLanguage, targetLanguage, translationMode, voicePreference])
+
+  const handleStopTranslation = useCallback(async () => {
+    if (!callId) return
+
+    setTranslationLoading(true)
+    setTokenError(null)
+
+    try {
+      const result = await api.calls.stopTranslation(callId)
+      setTranslationStatus(result.status)
+      setTranslationEnabled(false)
+      translationAutoStartRequested.current = false
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        logout()
+        navigate('/login', { replace: true })
+        return
+      }
+
+      setTokenError(err instanceof Error ? err.message : 'No se pudo detener la traducción')
+    } finally {
+      setTranslationLoading(false)
+    }
+  }, [callId, logout, navigate])
 
   useEffect(() => {
     if (!tokenData || !translationEnabled || translationAutoStartRequested.current) {
@@ -596,6 +658,10 @@ function CallPage() {
           <div>
             <span className="panel-kicker">Voz</span>
             <strong>{voicePreference === 'male' ? 'Masculina' : 'Femenina'}</strong>
+          </div>
+          <div>
+            <span className="panel-kicker">Estrategia</span>
+            <strong>{translationMode === 'fast' ? 'Rápido' : 'Estable'}</strong>
           </div>
           <div>
             <span className="panel-kicker">Translation</span>
@@ -722,6 +788,17 @@ function CallPage() {
               <option value="female">Femenina</option>
             </select>
           </label>
+
+          <label className="field">
+            <span>Estrategia</span>
+            <select
+              value={translationMode}
+              onChange={(event) => setTranslationMode(event.target.value as 'fast' | 'stable')}
+            >
+              <option value="fast">Rápido</option>
+              <option value="stable">Estable</option>
+            </select>
+          </label>
         </div>
 
         <div className="session-summary">
@@ -764,17 +841,27 @@ function CallPage() {
           </div>
         ) : null}
 
-        <button
-          type="button"
-          className="secondary-button"
-          onClick={() => {
-            translationAutoStartRequested.current = false
-            void handleStartTranslation()
-          }}
-          disabled={translationLoading}
-        >
-          {translationLoading ? 'Activando traducción...' : 'Activar traducción'}
-        </button>
+        <div className="button-row call-actions">
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={() => {
+              translationAutoStartRequested.current = false
+              void handleStartTranslation()
+            }}
+            disabled={translationLoading}
+          >
+            {translationLoading ? 'Activando traducción...' : 'Activar traducción'}
+          </button>
+          <button
+            type="button"
+            className="ghost-button"
+            onClick={() => void handleStopTranslation()}
+            disabled={translationLoading || !translationEnabled}
+          >
+            Detener doblaje
+          </button>
+        </div>
         <p className="helper-copy">La traducción se activa sola al entrar a la sala, incluso si todavía no hay otro participante.</p>
       </section>
 

@@ -2,6 +2,10 @@
 
 Monorepo base para el sandbox de videollamada con traducción voz a voz.
 
+## Guía
+
+- [Tutorial de arquitectura y aprendizaje](./tutorial.md)
+
 ## Estructura
 
 - `apps/web`: frontend React + Vite + TypeScript

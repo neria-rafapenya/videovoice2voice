@@ -37,6 +37,7 @@ export class LivekitService {
       sourceLanguage: 'es' | 'en'
       targetLanguage: 'es' | 'en'
       ttsVoice: 'male' | 'female'
+      translationMode: 'fast' | 'stable'
     },
   ) {
     const dispatchClient = new AgentDispatchClient(this.livekitHttpUrl, this.apiKey, this.apiSecret)
@@ -44,6 +45,11 @@ export class LivekitService {
     return dispatchClient.createDispatch(roomName, this.translatorAgentName, {
       metadata: JSON.stringify(metadata),
     })
+  }
+
+  async deleteTranslatorDispatch(roomName: string, dispatchId: string) {
+    const dispatchClient = new AgentDispatchClient(this.livekitHttpUrl, this.apiKey, this.apiSecret)
+    await dispatchClient.deleteDispatch(dispatchId, roomName)
   }
 }
 

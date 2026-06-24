@@ -9,4 +9,7 @@ export class StartTranslationDto {
 
   @IsIn(['male', 'female'])
   ttsVoice!: 'male' | 'female'
+
+  @IsIn(['fast', 'stable'])
+  translationMode!: 'fast' | 'stable'
 }

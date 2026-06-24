@@ -17,6 +17,7 @@ export type DbCallRow = {
   source_language: 'es' | 'en' | null
   target_language: 'es' | 'en' | null
   tts_voice: 'male' | 'female' | null
+  translation_mode: 'fast' | 'stable' | null
   translation_enabled: boolean
   translation_dispatch_id: string | null
 }
@@ -123,6 +124,7 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
           c.source_language,
           c.target_language,
           c.tts_voice,
+          c.translation_mode,
           c.translation_enabled,
           c.translation_dispatch_id
         FROM calls c
@@ -141,6 +143,7 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     sourceLanguage: 'es' | 'en',
     targetLanguage: 'es' | 'en',
     ttsVoice: 'male' | 'female',
+    translationMode: 'fast' | 'stable',
   ) {
     await this.query(
       `
@@ -148,11 +151,12 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
         SET source_language = $2,
             target_language = $3,
             tts_voice = $4,
+            translation_mode = $5,
             translation_enabled = TRUE,
             updated_at = NOW()
         WHERE call_id = $1
       `,
-      [callId, sourceLanguage, targetLanguage, ttsVoice],
+      [callId, sourceLanguage, targetLanguage, ttsVoice, translationMode],
     )
   }
 
@@ -165,6 +169,19 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
         WHERE call_id = $1
       `,
       [callId, dispatchId],
+    )
+  }
+
+  async clearCallTranslation(callId: string) {
+    await this.query(
+      `
+        UPDATE calls
+        SET translation_enabled = FALSE,
+            translation_dispatch_id = NULL,
+            updated_at = NOW()
+        WHERE call_id = $1
+      `,
+      [callId],
     )
   }
 
@@ -195,6 +212,7 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
         source_language TEXT NULL CHECK (source_language IN ('es', 'en')),
         target_language TEXT NULL CHECK (target_language IN ('es', 'en')),
         tts_voice TEXT NULL CHECK (tts_voice IN ('male', 'female')),
+        translation_mode TEXT NULL CHECK (translation_mode IN ('fast', 'stable')),
         translation_enabled BOOLEAN NOT NULL DEFAULT FALSE,
         translation_dispatch_id TEXT NULL,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -206,6 +224,7 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     await this.query(`ALTER TABLE calls ADD COLUMN IF NOT EXISTS source_language TEXT NULL`)
     await this.query(`ALTER TABLE calls ADD COLUMN IF NOT EXISTS target_language TEXT NULL`)
     await this.query(`ALTER TABLE calls ADD COLUMN IF NOT EXISTS tts_voice TEXT NULL`)
+    await this.query(`ALTER TABLE calls ADD COLUMN IF NOT EXISTS translation_mode TEXT NULL`)
     await this.query(`ALTER TABLE calls ADD COLUMN IF NOT EXISTS translation_enabled BOOLEAN NOT NULL DEFAULT FALSE`)
 
     await this.query(`CREATE INDEX IF NOT EXISTS idx_auth_sessions_user_id ON auth_sessions(user_id)`)

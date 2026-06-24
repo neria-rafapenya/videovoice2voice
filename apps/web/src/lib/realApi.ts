@@ -4,6 +4,7 @@ import type {
   LiveKitTokenResponse,
   ParticipantTokenRequest,
   TranslationStartResponse,
+  TranslationStopResponse,
 } from './types'
 import { getStoredAccessToken } from './session'
 
@@ -77,10 +78,16 @@ export const realApi = {
       sourceLanguage: 'es' | 'en',
       targetLanguage: 'es' | 'en',
       ttsVoice: 'male' | 'female',
+      translationMode: 'fast' | 'stable',
     ) {
       return request<TranslationStartResponse>(`/calls/${callId}/translation/start`, {
         method: 'POST',
-        body: JSON.stringify({ sourceLanguage, targetLanguage, ttsVoice }),
+        body: JSON.stringify({ sourceLanguage, targetLanguage, ttsVoice, translationMode }),
+      })
+    },
+    stopTranslation(callId: string) {
+      return request<TranslationStopResponse>(`/calls/${callId}/translation/stop`, {
+        method: 'POST',
       })
     },
   },

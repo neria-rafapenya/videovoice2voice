@@ -40,6 +40,7 @@ export class CallsService {
     sourceLanguage: 'es' | 'en',
     targetLanguage: 'es' | 'en',
     ttsVoice: 'male' | 'female',
+    translationMode: 'fast' | 'stable',
   ) {
     await this.requireUser(accessToken)
     const call = await this.databaseService.getCallById(callId)
@@ -63,9 +64,16 @@ export class CallsService {
       sourceLanguage,
       targetLanguage,
       ttsVoice,
+      translationMode,
     })
 
-    await this.databaseService.updateCallTranslation(callId, sourceLanguage, targetLanguage, ttsVoice)
+    await this.databaseService.updateCallTranslation(
+      callId,
+      sourceLanguage,
+      targetLanguage,
+      ttsVoice,
+      translationMode,
+    )
     await this.databaseService.setCallTranslationDispatch(callId, dispatch.id)
 
     return {
@@ -74,7 +82,28 @@ export class CallsService {
       sourceLanguage,
       targetLanguage,
       ttsVoice,
+      translationMode,
       dispatchId: dispatch.id,
+    }
+  }
+
+  async stopTranslation(accessToken: string, callId: string) {
+    await this.requireUser(accessToken)
+    const call = await this.databaseService.getCallById(callId)
+
+    if (!call) {
+      throw new NotFoundException('La llamada no existe')
+    }
+
+    if (call.translation_dispatch_id) {
+      await this.livekitService.deleteTranslatorDispatch(call.room_name, call.translation_dispatch_id)
+    }
+
+    await this.databaseService.clearCallTranslation(callId)
+
+    return {
+      callId,
+      status: 'STOPPED',
     }
   }
 

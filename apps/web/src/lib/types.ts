@@ -25,7 +25,13 @@ export type TranslationStartResponse = {
   sourceLanguage: 'es' | 'en'
   targetLanguage: 'es' | 'en'
   ttsVoice: 'male' | 'female'
+  translationMode: 'fast' | 'stable'
   dispatchId?: string
+}
+
+export type TranslationStopResponse = {
+  callId: string
+  status: string
 }
 
 export type ParticipantTokenRequest = {

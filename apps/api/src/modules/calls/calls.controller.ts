@@ -38,7 +38,13 @@ export class CallsController {
       dto.sourceLanguage,
       dto.targetLanguage,
       dto.ttsVoice,
+      dto.translationMode,
     )
+  }
+
+  @Post(':callId/translation/stop')
+  stopTranslation(@Param('callId') callId: string, @Headers('authorization') authorization: string) {
+    return this.callsService.stopTranslation(extractAccessToken(authorization), callId)
   }
 }
 
