@@ -4,7 +4,7 @@ import os
 
 from dotenv import load_dotenv
 
-from livekit.agents import Agent, AgentProcess, AgentServer, AgentSession, JobContext, cli, room_io
+from livekit.agents import Agent, AgentServer, AgentSession, JobContext, JobProcess, cli, room_io
 from livekit.plugins import google, silero
 
 load_dotenv()
@@ -15,7 +15,7 @@ logger.setLevel(logging.INFO)
 server = AgentServer()
 
 
-def prewarm(proc: AgentProcess):
+def prewarm(proc: JobProcess):
     proc.userdata["vad"] = silero.VAD.load()
 
 
