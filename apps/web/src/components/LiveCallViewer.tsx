@@ -7,7 +7,7 @@ import {
   useTracks,
 } from '@livekit/components-react'
 import { useEffect } from 'react'
-import { Track } from 'livekit-client'
+import { RoomEvent, Track } from 'livekit-client'
 
 type LiveCallViewerProps = {
   serverUrl: string
@@ -16,6 +16,7 @@ type LiveCallViewerProps = {
   micEnabled: boolean
   cameraEnabled: boolean
   onDisconnected: () => void
+  onTranslatorStatus: (status: { level: 'ok' | 'warning'; message: string } | null) => void
 }
 
 function TrackSync({ micEnabled, cameraEnabled }: Pick<LiveCallViewerProps, 'micEnabled' | 'cameraEnabled'>) {
@@ -49,7 +50,50 @@ function RemoteStage() {
   )
 }
 
-export function LiveCallViewer({ serverUrl, token, connected, micEnabled, cameraEnabled, onDisconnected }: LiveCallViewerProps) {
+function TranslatorStatusListener({
+  onTranslatorStatus,
+}: Pick<LiveCallViewerProps, 'onTranslatorStatus'>) {
+  const room = useRoomContext()
+
+  useEffect(() => {
+    const handleData = (payload: Uint8Array, _participant: unknown, _kind: unknown, topic?: string) => {
+      if (topic !== 'translator-status') {
+        return
+      }
+
+      try {
+        const message = JSON.parse(new TextDecoder().decode(payload)) as {
+          type?: string
+          level?: 'ok' | 'warning'
+          message?: string
+        }
+
+        if (message.type === 'translator-status' && message.level && message.message) {
+          onTranslatorStatus({ level: message.level, message: message.message })
+        }
+      } catch {
+        onTranslatorStatus({ level: 'warning', message: 'No se pudo leer el estado del traductor.' })
+      }
+    }
+
+    room.on(RoomEvent.DataReceived, handleData)
+    return () => {
+      room.off(RoomEvent.DataReceived, handleData)
+    }
+  }, [onTranslatorStatus, room])
+
+  return null
+}
+
+export function LiveCallViewer({
+  serverUrl,
+  token,
+  connected,
+  micEnabled,
+  cameraEnabled,
+  onDisconnected,
+  onTranslatorStatus,
+}: LiveCallViewerProps) {
   return (
     <div className="live-call-viewer">
       <LiveKitRoom
@@ -63,6 +107,7 @@ export function LiveCallViewer({ serverUrl, token, connected, micEnabled, camera
         className="livekit-room"
       >
         <TrackSync micEnabled={micEnabled} cameraEnabled={cameraEnabled} />
+        <TranslatorStatusListener onTranslatorStatus={onTranslatorStatus} />
         <RemoteStage />
         <RoomAudioRenderer />
       </LiveKitRoom>

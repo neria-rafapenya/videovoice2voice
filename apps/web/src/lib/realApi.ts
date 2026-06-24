@@ -76,10 +76,11 @@ export const realApi = {
       callId: string,
       sourceLanguage: 'es' | 'en',
       targetLanguage: 'es' | 'en',
+      ttsVoice: 'male' | 'female',
     ) {
       return request<TranslationStartResponse>(`/calls/${callId}/translation/start`, {
         method: 'POST',
-        body: JSON.stringify({ sourceLanguage, targetLanguage }),
+        body: JSON.stringify({ sourceLanguage, targetLanguage, ttsVoice }),
       })
     },
   },

@@ -2,7 +2,6 @@ import asyncio
 import json
 import logging
 import os
-from itertools import cycle
 
 from dotenv import load_dotenv
 
@@ -25,14 +24,12 @@ logger.setLevel(logging.INFO)
 
 server = AgentServer()
 VOICE_MODEL = "inworld/inworld-tts-2"
-FEMALE_VOICE = os.environ.get("TTS_VOICE_FEMALE", "Ashley")
-MALE_VOICE = os.environ.get("TTS_VOICE_MALE", "Diego")
+DEFAULT_TTS_VOICE = os.environ.get("TTS_VOICE_DEFAULT", os.environ.get("TTS_VOICE_MALE", "Diego"))
+FEMALE_TTS_VOICE = os.environ.get("TTS_VOICE_FEMALE", "Ashley")
 
 
 def prewarm(proc: JobProcess):
     proc.userdata["vad"] = inference.VAD(model="silero")
-    proc.userdata["speaker_voices"] = {}
-    proc.userdata["voice_cycle"] = cycle((MALE_VOICE, FEMALE_VOICE))
 
 
 server.setup_fnc = prewarm
@@ -56,21 +53,6 @@ def build_instructions(source_language: str, target_language: str) -> str:
     )
 
 
-def next_voice(proc: JobProcess) -> str:
-    return next(proc.userdata["voice_cycle"])
-
-
-def voice_for_speaker(proc: JobProcess, speaker_id: str | None) -> str:
-    if not speaker_id:
-        return MALE_VOICE
-
-    speaker_voices = proc.userdata["speaker_voices"]
-    if speaker_id not in speaker_voices:
-        speaker_voices[speaker_id] = next_voice(proc)
-
-    return speaker_voices[speaker_id]
-
-
 def build_translator_agent(instructions: str, voice_name: str, target_language: str) -> Agent:
     return Agent(
         instructions=instructions,
@@ -87,6 +69,8 @@ async def entrypoint(ctx: JobContext):
     metadata = json.loads(ctx.job.metadata or "{}")
     source_language = metadata.get("sourceLanguage", "es")
     target_language = metadata.get("targetLanguage", "en")
+    tts_voice = metadata.get("ttsVoice", "male")
+    selected_voice = DEFAULT_TTS_VOICE if tts_voice == "male" else FEMALE_TTS_VOICE
     instructions = build_instructions(source_language, target_language)
 
     logger.info(
@@ -96,10 +80,11 @@ async def entrypoint(ctx: JobContext):
             "callId": metadata.get("callId"),
             "sourceLanguage": source_language,
             "targetLanguage": target_language,
+            "ttsVoice": tts_voice,
         },
     )
 
-    initial_voice = MALE_VOICE
+    initial_voice = selected_voice
     session = AgentSession(
         stt=inference.STT(
             model="deepgram/nova-3",
@@ -118,7 +103,7 @@ async def entrypoint(ctx: JobContext):
             },
             preemptive_generation={
                 "enabled": True,
-                "preemptive_tts": True,
+                "preemptive_tts": False,
                 "max_speech_duration": 8.0,
                 "max_retries": 3,
             },
@@ -126,18 +111,24 @@ async def entrypoint(ctx: JobContext):
     )
 
     session_agent = build_translator_agent(instructions, initial_voice, target_language)
-    active_voice = initial_voice
     pending_translation_task: asyncio.Task[None] | None = None
     latest_partial_transcript = ""
     latest_partial_speaker_id: str | None = None
+    alert_sent = False
+
+    async def publish_status(level: str, message: str):
+        payload = json.dumps(
+            {
+                "type": "translator-status",
+                "level": level,
+                "message": message,
+                "callId": metadata.get("callId"),
+            }
+        )
+        await ctx.room.local_participant.publish_data(payload, topic="translator-status")
 
     async def speak_translation(transcript: str, speaker_id: str | None):
-        nonlocal active_voice
-
-        voice_name = voice_for_speaker(ctx.proc, speaker_id)
-        if voice_name != active_voice:
-            session.update_agent(build_translator_agent(instructions, voice_name, target_language))
-            active_voice = voice_name
+        nonlocal alert_sent
 
         logger.info(
             "translating transcript",
@@ -145,16 +136,36 @@ async def entrypoint(ctx: JobContext):
                 "room": ctx.room.name,
                 "callId": metadata.get("callId"),
                 "speakerId": speaker_id,
-                "voice": voice_name,
+                "voice": initial_voice,
                 "transcript": transcript,
             },
         )
 
-        await session.generate_reply(
-            user_input=transcript,
-            instructions=instructions,
-            input_modality="text",
+        try:
+            await session.generate_reply(
+                user_input=transcript,
+                instructions=instructions,
+                input_modality="text",
+            )
+            if alert_sent:
+                await publish_status("ok", "Traducción activa")
+                alert_sent = False
+        except Exception as error:
+            logger.exception(
+                "translator synthesis failed",
+                extra={
+                "room": ctx.room.name,
+                "callId": metadata.get("callId"),
+                "speakerId": speaker_id,
+                "voice": initial_voice,
+            },
         )
+            if not alert_sent:
+                await publish_status(
+                    "warning",
+                    f"LiveKit TTS no puede sintetizar ahora mismo: {error}",
+                )
+                alert_sent = True
 
     @session.on("user_input_transcribed")
     def on_user_input_transcribed(event):
@@ -164,7 +175,10 @@ async def entrypoint(ctx: JobContext):
         is_final = bool(getattr(event, "is_final", False))
         speaker_id = getattr(event, "speaker_id", None)
 
-        if not is_final or not transcript:
+        if not transcript:
+            return
+
+        if not is_final:
             if len(transcript) < 12:
                 return
 

@@ -6,4 +6,7 @@ export class StartTranslationDto {
 
   @IsIn(['es', 'en'])
   targetLanguage!: 'es' | 'en'
+
+  @IsIn(['male', 'female'])
+  ttsVoice!: 'male' | 'female'
 }

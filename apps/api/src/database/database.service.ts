@@ -16,6 +16,7 @@ export type DbCallRow = {
   owner_email: string
   source_language: 'es' | 'en' | null
   target_language: 'es' | 'en' | null
+  tts_voice: 'male' | 'female' | null
   translation_enabled: boolean
   translation_dispatch_id: string | null
 }
@@ -121,6 +122,7 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
           u.email AS owner_email,
           c.source_language,
           c.target_language,
+          c.tts_voice,
           c.translation_enabled,
           c.translation_dispatch_id
         FROM calls c
@@ -134,17 +136,23 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     return result.rows[0] ?? null
   }
 
-  async updateCallTranslation(callId: string, sourceLanguage: 'es' | 'en', targetLanguage: 'es' | 'en') {
+  async updateCallTranslation(
+    callId: string,
+    sourceLanguage: 'es' | 'en',
+    targetLanguage: 'es' | 'en',
+    ttsVoice: 'male' | 'female',
+  ) {
     await this.query(
       `
         UPDATE calls
         SET source_language = $2,
             target_language = $3,
+            tts_voice = $4,
             translation_enabled = TRUE,
             updated_at = NOW()
         WHERE call_id = $1
       `,
-      [callId, sourceLanguage, targetLanguage],
+      [callId, sourceLanguage, targetLanguage, ttsVoice],
     )
   }
 
@@ -186,6 +194,7 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
         owner_id TEXT NOT NULL REFERENCES app_users(id) ON DELETE RESTRICT,
         source_language TEXT NULL CHECK (source_language IN ('es', 'en')),
         target_language TEXT NULL CHECK (target_language IN ('es', 'en')),
+        tts_voice TEXT NULL CHECK (tts_voice IN ('male', 'female')),
         translation_enabled BOOLEAN NOT NULL DEFAULT FALSE,
         translation_dispatch_id TEXT NULL,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -196,6 +205,7 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     await this.query(`ALTER TABLE calls ADD COLUMN IF NOT EXISTS translation_dispatch_id TEXT NULL`)
     await this.query(`ALTER TABLE calls ADD COLUMN IF NOT EXISTS source_language TEXT NULL`)
     await this.query(`ALTER TABLE calls ADD COLUMN IF NOT EXISTS target_language TEXT NULL`)
+    await this.query(`ALTER TABLE calls ADD COLUMN IF NOT EXISTS tts_voice TEXT NULL`)
     await this.query(`ALTER TABLE calls ADD COLUMN IF NOT EXISTS translation_enabled BOOLEAN NOT NULL DEFAULT FALSE`)
 
     await this.query(`CREATE INDEX IF NOT EXISTS idx_auth_sessions_user_id ON auth_sessions(user_id)`)

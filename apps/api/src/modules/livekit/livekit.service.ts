@@ -36,6 +36,7 @@ export class LivekitService {
       callId: string
       sourceLanguage: 'es' | 'en'
       targetLanguage: 'es' | 'en'
+      ttsVoice: 'male' | 'female'
     },
   ) {
     const dispatchClient = new AgentDispatchClient(this.livekitHttpUrl, this.apiKey, this.apiSecret)

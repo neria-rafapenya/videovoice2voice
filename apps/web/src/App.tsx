@@ -150,6 +150,7 @@ function HomePage() {
   const [error, setError] = useState<string | null>(null)
   const [sourceLanguage, setSourceLanguage] = useState<'es' | 'en'>('es')
   const [targetLanguage, setTargetLanguage] = useState<'es' | 'en'>('en')
+  const [voicePreference, setVoicePreference] = useState<'male' | 'female'>('male')
   const [voiceMode, setVoiceMode] = useState<'solo-translation' | 'translation-plus-original' | 'push-to-translate'>(
     'solo-translation',
   )
@@ -160,13 +161,14 @@ function HomePage() {
 
     try {
       const call = await api.calls.create()
-      navigate(`/call/${call.callId}`, {
-        state: {
-          sourceLanguage,
-          targetLanguage,
-          voiceMode,
-        },
-      })
+          navigate(`/call/${call.callId}`, {
+            state: {
+              sourceLanguage,
+              targetLanguage,
+              voicePreference,
+              voiceMode,
+            },
+          })
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         logout()
@@ -272,6 +274,29 @@ function HomePage() {
           </div>
         </div>
 
+        <div className="language-group">
+          <div className="language-group-header">
+            <span className="panel-kicker">Voz TTS</span>
+            <strong>{voicePreference === 'male' ? 'Masculina' : 'Femenina'}</strong>
+          </div>
+          <div className="button-row">
+            <button
+              type="button"
+              className={`choice-button ${voicePreference === 'male' ? 'is-selected' : ''}`}
+              onClick={() => setVoicePreference('male')}
+            >
+              Masculina
+            </button>
+            <button
+              type="button"
+              className={`choice-button ${voicePreference === 'female' ? 'is-selected' : ''}`}
+              onClick={() => setVoicePreference('female')}
+            >
+              Femenina
+            </button>
+          </div>
+        </div>
+
         <div className="session-summary dashboard-metrics">
           <article>
             <span>Estado</span>
@@ -336,6 +361,7 @@ function CallPage() {
     | {
         sourceLanguage?: 'es' | 'en'
         targetLanguage?: 'es' | 'en'
+        voicePreference?: 'male' | 'female'
         voiceMode?: 'solo-translation' | 'translation-plus-original' | 'push-to-translate'
       }
     | null
@@ -346,6 +372,7 @@ function CallPage() {
   const [translationEnabled, setTranslationEnabled] = useState(true)
   const [sourceLanguage, setSourceLanguage] = useState<'es' | 'en'>(preset?.sourceLanguage ?? 'es')
   const [targetLanguage, setTargetLanguage] = useState<'es' | 'en'>(preset?.targetLanguage ?? 'en')
+  const [voicePreference, setVoicePreference] = useState<'male' | 'female'>(preset?.voicePreference ?? 'male')
   const [mode, setMode] = useState<'solo-translation' | 'translation-plus-original' | 'push-to-translate'>(
     preset?.voiceMode ?? 'solo-translation',
   )
@@ -356,6 +383,7 @@ function CallPage() {
   const [tokenData, setTokenData] = useState<{ livekitUrl: string; token: string } | null>(null)
   const [tokenError, setTokenError] = useState<string | null>(null)
   const [translationStatus, setTranslationStatus] = useState<string>('Pendiente')
+  const [translatorNotice, setTranslatorNotice] = useState<{ level: 'ok' | 'warning'; message: string } | null>(null)
   const [translationLoading, setTranslationLoading] = useState(false)
   const [roomConnected, setRoomConnected] = useState(false)
   const [mediaReady, setMediaReady] = useState(false)
@@ -498,8 +526,10 @@ function CallPage() {
     setTokenError(null)
 
     try {
-      const result = await api.calls.startTranslation(callId, sourceLanguage, targetLanguage)
-      setTranslationStatus(`${result.status}: ${result.sourceLanguage} → ${result.targetLanguage}`)
+      const result = await api.calls.startTranslation(callId, sourceLanguage, targetLanguage, voicePreference)
+      setTranslationStatus(
+        `${result.status}: ${result.sourceLanguage} → ${result.targetLanguage} (${result.ttsVoice === 'male' ? 'Masculina' : 'Femenina'})`,
+      )
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         logout()
@@ -511,7 +541,7 @@ function CallPage() {
     } finally {
       setTranslationLoading(false)
     }
-  }, [callId, logout, navigate, sourceLanguage, targetLanguage])
+  }, [callId, logout, navigate, sourceLanguage, targetLanguage, voicePreference])
 
   useEffect(() => {
     if (!tokenData || !translationEnabled || translationAutoStartRequested.current) {
@@ -564,6 +594,10 @@ function CallPage() {
             </strong>
           </div>
           <div>
+            <span className="panel-kicker">Voz</span>
+            <strong>{voicePreference === 'male' ? 'Masculina' : 'Femenina'}</strong>
+          </div>
+          <div>
             <span className="panel-kicker">Translation</span>
             <strong className={`translation-badge ${translationEnabled ? 'is-on' : 'is-off'}`}>
               {translationEnabled ? 'Traducción activa' : 'Traducción pausada'}
@@ -589,6 +623,7 @@ function CallPage() {
                 micEnabled={micEnabled}
                 cameraEnabled={cameraEnabled}
                 onDisconnected={() => setRoomConnected(false)}
+                onTranslatorStatus={setTranslatorNotice}
               />
             ) : (
               <div className="viewer-loading">Preparando sala de video...</div>
@@ -679,6 +714,14 @@ function CallPage() {
               }}
             />
           </label>
+
+          <label className="field">
+            <span>Voz TTS</span>
+            <select value={voicePreference} onChange={(event) => setVoicePreference(event.target.value as 'male' | 'female')}>
+              <option value="male">Masculina</option>
+              <option value="female">Femenina</option>
+            </select>
+          </label>
         </div>
 
         <div className="session-summary">
@@ -695,6 +738,12 @@ function CallPage() {
             <strong>{translationStatus}</strong>
           </article>
         </div>
+
+        {translatorNotice ? (
+          <p className={`error-banner ${translatorNotice.level === 'warning' ? 'is-warning' : ''}`}>
+            {translatorNotice.message}
+          </p>
+        ) : null}
 
         {tokenError ? <p className="error-banner">{tokenError}</p> : null}
 
@@ -744,7 +793,9 @@ function CallPage() {
           <div className="log-box" role="log" aria-live="polite">
             <p>GET /me → session active</p>
             <p>POST /calls/{callId}/token → token solicitado para {participantId}</p>
-            <p>POST /calls/{callId}/translation/start → {translationEnabled ? 'bridge Gemini activo' : 'translation paused'}</p>
+            <p>
+              POST /calls/{callId}/translation/start → {translationEnabled ? 'bridge Gemini activo' : 'translation paused'}
+            </p>
             <p>Web Audio API → captura local preparada</p>
           </div>
         ) : (

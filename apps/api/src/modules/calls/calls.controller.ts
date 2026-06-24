@@ -37,6 +37,7 @@ export class CallsController {
       callId,
       dto.sourceLanguage,
       dto.targetLanguage,
+      dto.ttsVoice,
     )
   }
 }

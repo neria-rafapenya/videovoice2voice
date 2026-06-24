@@ -39,6 +39,7 @@ export class CallsService {
     callId: string,
     sourceLanguage: 'es' | 'en',
     targetLanguage: 'es' | 'en',
+    ttsVoice: 'male' | 'female',
   ) {
     await this.requireUser(accessToken)
     const call = await this.databaseService.getCallById(callId)
@@ -61,9 +62,10 @@ export class CallsService {
       callId,
       sourceLanguage,
       targetLanguage,
+      ttsVoice,
     })
 
-    await this.databaseService.updateCallTranslation(callId, sourceLanguage, targetLanguage)
+    await this.databaseService.updateCallTranslation(callId, sourceLanguage, targetLanguage, ttsVoice)
     await this.databaseService.setCallTranslationDispatch(callId, dispatch.id)
 
     return {
@@ -71,6 +73,7 @@ export class CallsService {
       status: 'ACTIVE',
       sourceLanguage,
       targetLanguage,
+      ttsVoice,
       dispatchId: dispatch.id,
     }
   }

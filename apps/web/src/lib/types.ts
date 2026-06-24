@@ -24,6 +24,7 @@ export type TranslationStartResponse = {
   status: string
   sourceLanguage: 'es' | 'en'
   targetLanguage: 'es' | 'en'
+  ttsVoice: 'male' | 'female'
   dispatchId?: string
 }
 
